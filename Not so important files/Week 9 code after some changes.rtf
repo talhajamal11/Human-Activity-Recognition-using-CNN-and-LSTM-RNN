@@ -1,0 +1,88 @@
+{\rtf1\ansi\ansicpg1252\cocoartf2511
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
+{\colortbl;\red255\green255\blue255;}
+{\*\expandedcolortbl;;}
+\paperw11900\paperh16840\margl1440\margr1440\vieww10800\viewh8400\viewkind0
+\pard\tx566\tx1133\tx1700\tx2267\tx2834\tx3401\tx3968\tx4535\tx5102\tx5669\tx6236\tx6803\pardirnatural\partightenfactor0
+
+\f0\fs24 \cf0 import numpy as np\
+import matplotlib.pyplot as plt\
+import pandas as pd\
+from scipy import interpolate\
+\
+import pickle # to serialise objects\
+from scipy import stats\
+import seaborn as sns\
+from sklearn import metrics\
+from sklearn.model_selection import train_test_split\
+\
+dataset_train = pd.read_csv('acceleration_labelled_data.csv') \
+training_set = pd.DataFrame(dataset_train.iloc[:, 1:6].values)\
+training_set.columns = ["Activity", "Timeframe", "X axis", "Y axis", "Z axis"]\
+\
+X = training_set.iloc[:, 2]\
+X = X.astype(float)\
+X = (X*1000000).astype('int64')\
+\
+Y = training_set.iloc[:, 3]\
+Y = Y.astype(float)\
+Y = (Y*1000000).astype('int64')\
+\
+Z = training_set.iloc[:, 4]\
+Z = Z.astype(float)\
+Z = (Z*1000000).astype('int64')\
+\
+\
+Old_T = (training_set.iloc[:, 1]).astype(float)\
+Old_T = (Old_T * 1000000)\
+Old_T = Old_T.astype('int64')\
+\
+New_T = np.arange(17856, 1823866951, 50000)\
+New_T = New_T.astype('int64')\
+\
+# find interpolation function\
+interpolate_function = interpolate.interp1d(Old_T, X, axis = 0, fill_value="extrapolate")\
+X_Final = interpolate_function((New_T))\
+\
+interpolate_function = interpolate.interp1d(Old_T, Y, axis = 0, fill_value="extrapolate")\
+Y_Final = interpolate_function((New_T))\
+\
+interpolate_function = interpolate.interp1d(Old_T, Z, axis = 0, fill_value="extrapolate")\
+Z_Final = interpolate_function((New_T))\
+\
+#Original Data Plot\
+plt.plot(Old_T, X, color = 'red')\
+plt.plot(Old_T, Y, color = 'red')\
+plt.plot(Old_T, Z, color = 'red')\
+\
+#Data Sampled at 20 hz\
+plt.plot(New_T, X_Final, color = 'blue')\
+plt.plot(New_T, Y_Final, color = 'blue')\
+plt.plot(New_T, Z_Final, color = 'blue')\
+\
+#Combining data into one pandas dataframe\
+\
+Dataset = pd.DataFrame()\
+Dataset['X_Final'] = X_Final\
+Dataset['Y_Final'] = Y_Final\
+Dataset['Z_Final'] = Z_Final\
+\
+Dataset['New_Timeframe'] = New_T\
+\
+Dataset = Dataset/1e6\
+\
+Dataset = Dataset[['New_Timeframe', 'X_Final', 'Y_Final', 'Z_Final']]\
+\
+Dataset['New_Activity'] = ""\
+Dataset = Dataset.astype('int64')\
+\
+\
+\
+\
+\
+\
+\
+\
+\
+\
+}
