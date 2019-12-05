@@ -140,7 +140,7 @@ def plot_activity(activity, dataframe):
 plot_activity("t_turn", Dataset)
 """
 
-#Data Preprocessing
+#Feature Generationa and Data Transformation
 
 TIME_STEPS = 200
 N_FEATURES = 3
@@ -159,11 +159,78 @@ for i in range(0, len(Dataset) - TIME_STEPS, STEP): #To give the starting point 
     labels.append(label)
     
     
+#reshaping our data
+
+reshaped_segments = np.asarray(segments, dtype = np.float32).reshape(-1, TIME_STEPS, N_FEATURES)
+#reshaped_segments.shape
+
+#Using one hot encoding
+labels = np.asarray(pd.get_dummies(labels), dtype = np.float32) 
+#labels.shape
+
+#Data Preprocessing
+#Splitting data into training on 80% and testing on 20%
+
+#train_test_split = np.random.rand(len(reshaped_segments)) < 0.80
+
+X_train, X_test, y_train, y_test = train_test_split(reshaped_segments, labels, test_size = 0.2, random_state = RANDOM_SEED)
+
     
+#Building the LSTM RNN Model
 
+from keras.models import Sequential
+from keras.layers import Dense
+from keras.layers import LSTM
+from keras.layers import Dropout
 
+#Initialising the RNN
+regressor = Sequential()
 
+# Adding the first LSTM layer and some Dropout regularisation
+regressor.add(LSTM(units = 50, return_sequences = True, input_shape = (X_train.shape[1], 3)))
+regressor.add(Dropout(0.2))
 
+# Adding a second LSTM layer and some Dropout regularisation
+regressor.add(LSTM(units = 50, return_sequences = True))
+regressor.add(Dropout(0.2))
+
+# Adding a third LSTM layer and some Dropout regularisation
+regressor.add(LSTM(units = 50, return_sequences = True))
+regressor.add(Dropout(0.2))
+
+# Adding a fourth LSTM layer and some Dropout regularisation
+regressor.add(LSTM(units = 50))
+regressor.add(Dropout(0.2))
+
+# Adding the output layer
+regressor.add(Dense(units = 10))
+
+# Compiling the RNN
+regressor.compile(optimizer = 'adam', loss = 'mean_squared_error')
+
+# Fitting the RNN to the Training set
+regressor.fit(X_train, y_train, epochs = 100, batch_size = 32)
+
+# Predicting the Test set results
+y_pred = regressor.predict(X_test)
+y_pred = (y_pred > 0.5)
+
+# Making the Confusion Matrix
+from sklearn.metrics import confusion_matrix
+cm = confusion_matrix(y_test.values.argmax(axis=1), y_pred.argmax(axis=1))
+
+def confusion_matrix_accuracy(cm):
+    tot = 0
+    num = 0
+    for i in range(0,9,1):
+        for j in range(0,9,1):
+            tot += cm[i][j]
+    for x in range(0,9,1):
+        num += cm[x][x]
+    
+    print((num/tot)*100)
+
+confusion_matrix_accuracy(cm)
 
 
 
