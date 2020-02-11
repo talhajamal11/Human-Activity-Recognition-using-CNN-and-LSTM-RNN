@@ -140,7 +140,7 @@ def plot_activity(activity, dataframe):
 plot_activity("t_turn", Dataset)
 """
 
-#Feature Generationa and Data Transformation
+#Feature Generation and Data Transformation
 
 TIME_STEPS = 200
 N_FEATURES = 3
@@ -157,7 +157,6 @@ for i in range(0, len(Dataset) - TIME_STEPS, STEP): #To give the starting point 
     label = label[0][0] #to ge value of mode
     segments.append([xs, ys, zs])
     labels.append(label)
-    
     
 #reshaping our data
 
