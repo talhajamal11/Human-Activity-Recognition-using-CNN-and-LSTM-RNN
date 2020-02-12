@@ -281,8 +281,8 @@ def accuracy(y_test,y_pred_list):
     y_test.columns = ["Activity"]
     y_pred_list = pd.DataFrame(y_pred_list)
     y_pred_list.columns = ["Activity"]
-    
-    print((correct/tot)*100)
+    answer = (correct/tot)*100
+    print(round(answer, 2))
     
 accuracy(y_test, y_pred_list)
 
