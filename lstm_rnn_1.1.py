@@ -290,3 +290,135 @@ accuracy(y_test, y_pred_list)
 
 
 
+
+
+
+
+
+
+
+
+
+#Loading WISDM dataset for validation
+#change this code slightly to avoid plagiarism
+def read_data(file_path):
+
+    column_names = ['user-id',
+                    'activity',
+                    'timestamp',
+                    'x-axis',
+                    'y-axis',
+                    'z-axis']
+    df = pd.read_csv(file_path,
+                     header=None,
+                     names=column_names)
+    # Last column has a ";" character which must be removed ...
+    df['z-axis'].replace(regex=True,
+      inplace=True,
+      to_replace=r';',
+      value=r'')
+    # ... and then this column must be transformed to float explicitly
+    df['z-axis'] = df['z-axis'].apply(convert_to_float)
+    # This is very important otherwise the model will not fit and loss
+    # will show up as NAN
+    df.dropna(axis=0, how='any', inplace=True)
+
+    return df
+
+def convert_to_float(x):
+
+    try:
+        return np.float(x)
+    except:
+        return np.nan
+ 
+def show_basic_dataframe_info(dataframe):
+
+    # Shape and how many rows and columns
+    print('Number of columns in the dataframe: %i' % (dataframe.shape[1]))
+    print('Number of rows in the dataframe: %i\n' % (dataframe.shape[0]))
+
+# Load data set containing all the data from csv
+wisdm_dataset = read_data('WISDM_ar_v1.1_raw.txt')
+
+
+#preprocessing WISDM dataset
+#normalising accelerometer values to be between 0 and 1
+wisdm_dataset['x-axis'] = wisdm_dataset['x-axis']/20
+wisdm_dataset['y-axis'] = wisdm_dataset['y-axis']/20
+wisdm_dataset['z-axis'] = wisdm_dataset['z-axis']/20
+
+#removing all the jogging data since classifier was not trained on it
+indexes_to_drop = []
+for index, row in wisdm_dataset.iterrows():
+    if row['activity'] == "Jogging":
+        indexes_to_drop.append(index)
+        
+
+wisdm_dataset.drop(wisdm_dataset.index[indexes_to_drop], inplace=True )
+
+#renaming the wisdm dataset with the class names that classifier is trained in
+wisdm_dataset = wisdm_dataset.to_numpy()
+
+for i in range(0, len(wisdm_dataset)-1):
+    if wisdm_dataset[i][1] == "Walking":
+        wisdm_dataset[i][1] = "a_walk"
+    if wisdm_dataset[i][1] == "Upstairs":
+        wisdm_dataset[i][1] = "a_ascend"
+    if wisdm_dataset[i][1] == "Downstairs":
+        wisdm_dataset[i][1] = "a_descend"
+    if wisdm_dataset[i][1] == "Sitting":
+        wisdm_dataset[i][1] = "p_sit"
+    if wisdm_dataset[i][1] == "Standing":
+        wisdm_dataset[i][1] = "p_stand"
+
+wisdm_dataset = pd.DataFrame(wisdm_dataset)
+wisdm_dataset.columns = ['user-id', 'activity', 'timestamp', 'x-axis', 'y-axis', 'z-axis']
+
+
+#segmenting the data
+WISDM_TEST_TIME_STEPS = 200
+WISDM_TEST_N_FEATURES = 3
+WISDM_TEST_STEP = 20
+
+wisdm_test_segments = []
+wisdm_test_labels = []
+
+for i in range(0, len(wisdm_dataset) - WISDM_TEST_TIME_STEPS, WISDM_TEST_STEP): #To give the starting point of each batch
+    w_t_xs = wisdm_dataset['x-axis'].values[i: i + WISDM_TEST_TIME_STEPS]
+    w_t_ys = wisdm_dataset['y-axis'].values[i: i + WISDM_TEST_TIME_STEPS]
+    w_t_zs = wisdm_dataset['z-axis'].values[i: i + WISDM_TEST_TIME_STEPS]
+    wisdm_test_label = stats.mode(wisdm_dataset['activity'][i: i + WISDM_TEST_TIME_STEPS]) #this statement returns mode and count
+    wisdm_test_label = wisdm_test_label[0][0] #to ge value of mode
+    wisdm_test_segments.append([w_t_xs, w_t_ys, w_t_zs])
+    wisdm_test_labels.append(wisdm_test_label)
+    
+#reshaping our data
+
+wisdm_test_reshaped_segments = np.asarray(wisdm_test_segments, dtype = np.float32).reshape(-1, WISDM_TEST_TIME_STEPS, WISDM_TEST_N_FEATURES)
+#reshaped_segments.shape
+
+#Using one hot encoding
+#wisdm_test_labels = np.asarray(pd.get_dummies(wisdm_test_labels), dtype = np.float32)
+
+
+wisdm_X_test = wisdm_test_reshaped_segments
+wisdm_y_test = wisdm_test_labels
+wisdm_test_df = pd.DataFrame(wisdm_y_test)
+
+wisdm_y_pred = regressor.predict(wisdm_X_test)
+wisdm_y_pred = (wisdm_y_pred > 0.5)
+
+wisdm_y_pred = pd.DataFrame(wisdm_y_pred)
+wisdm_y_pred.columns = l_one_hot.columns
+
+#Converting y_pred from boolean to table
+wisdm_y_pred_list = wisdm_y_pred.idxmax(axis = 1)
+wisdm_y_pred_list = pd.DataFrame(wisdm_y_pred_list)
+wisdm_y_pred_list.columns = ["Activity"]
+wisdm_y_pred_list['Activity'] = wisdm_y_pred_list['Activity'].str[2:]
+wisdm_y_test = pd.DataFrame(wisdm_y_test)
+wisdm_y_test.columns = ["Activity"]
+
+accuracy(wisdm_y_test, wisdm_y_pred_list)
+
