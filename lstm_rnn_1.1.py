@@ -199,9 +199,6 @@ Test_set = pd.read_csv('final_test_set_2people.csv')
 Test_set.drop(['Unnamed: 0'], axis = 1, inplace = True)
 
 
-
-
-
 #combing smaller classes to bigger classes
 
 Test_set = Test_set.to_numpy()
@@ -216,7 +213,6 @@ for i in range(0, len(Test_set)-1):
 
 Test_set = pd.DataFrame(Test_set)
 Test_set.columns = ["User","Activity", "Timeframe", "X axis", "Y axis", "Z axis"]
-
 
 
 
@@ -344,9 +340,9 @@ wisdm_dataset = read_data('WISDM_ar_v1.1_raw.txt')
 
 #preprocessing WISDM dataset
 #normalising accelerometer values to be between 0 and 1
-wisdm_dataset['x-axis'] = wisdm_dataset['x-axis']/20
-wisdm_dataset['y-axis'] = wisdm_dataset['y-axis']/20
-wisdm_dataset['z-axis'] = wisdm_dataset['z-axis']/20
+wisdm_dataset['x-axis'] = wisdm_dataset['x-axis']/10
+wisdm_dataset['y-axis'] = wisdm_dataset['y-axis']/10
+wisdm_dataset['z-axis'] = wisdm_dataset['z-axis']/10
 
 #removing all the jogging data since classifier was not trained on it
 indexes_to_drop = []
@@ -420,5 +416,5 @@ wisdm_y_pred_list['Activity'] = wisdm_y_pred_list['Activity'].str[2:]
 wisdm_y_test = pd.DataFrame(wisdm_y_test)
 wisdm_y_test.columns = ["Activity"]
 
-accuracy(wisdm_y_test, wisdm_y_pred_list)
+accuracy(wisdm_y_test, wisdm_y_pred_list) 
 
