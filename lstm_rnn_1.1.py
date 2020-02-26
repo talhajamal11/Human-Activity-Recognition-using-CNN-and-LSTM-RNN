@@ -418,3 +418,5 @@ wisdm_y_test.columns = ["Activity"]
 
 accuracy(wisdm_y_test, wisdm_y_pred_list) 
 
+
+
