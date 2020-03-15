@@ -130,6 +130,10 @@ from sklearn.preprocessing import LabelEncoder
 Label = LabelEncoder()
 Dataset['Label'] = Label.fit_transform(Dataset['New_Activity'])
 
+Label_Encoder_mapping = dict(zip(Label.classes_, Label.transform(Label.classes_)))
+
+
+
 
 
 #Feature Generation and Data Transformation
@@ -206,7 +210,7 @@ Test_set['New_Activity'] = Test_set.New_Activity.astype(str)
 from sklearn.preprocessing import LabelEncoder
 Test_Label = LabelEncoder()
 Test_set['Test_Label'] = Test_Label.fit_transform(Test_set['New_Activity'])
-
+Test_Label_Encoder_mapping = dict(zip(Test_Label.classes_, Test_Label.transform(Test_Label.classes_)))
 
 
 TEST_TIME_STEPS = 200
@@ -284,14 +288,141 @@ y_pred = regressor.predict_classes(X_test)
 print(accuracy_score(y_test, y_pred) * 100)
 
 mat = confusion_matrix(y_test, y_pred)
-plot_confusion_matrix(conf_mat=mat, class_names=Label.classes_, show_normed=True, figsize=(10,10))
+plot_confusion_matrix(conf_mat=mat, class_names=Label.classes_, show_normed=True, figsize=(7,7), colorbar=True, show_absolute=False)
+
+
+
+
 
 
 
 #Testing on the WISDM Dataset
 
+#Loading WISDM dataset for validation
+#change this code slightly to avoid plagiarism
+def read_data(file_path):
+
+    column_names = ['user-id',
+                    'activity',
+                    'timestamp',
+                    'x-axis',
+                    'y-axis',
+                    'z-axis']
+    df = pd.read_csv(file_path,
+                     header=None,
+                     names=column_names)
+    # Last column has a ";" character which must be removed ...
+    df['z-axis'].replace(regex=True,
+      inplace=True,
+      to_replace=r';',
+      value=r'')
+    # ... and then this column must be transformed to float explicitly
+    df['z-axis'] = df['z-axis'].apply(convert_to_float)
+    # This is very important otherwise the model will not fit and loss
+    # will show up as NAN
+    df.dropna(axis=0, how='any', inplace=True)
+
+    return df
+
+def convert_to_float(x):
+
+    try:
+        return np.float(x)
+    except:
+        return np.nan
+ 
+def show_basic_dataframe_info(dataframe):
+
+    # Shape and how many rows and columns
+    print('Number of columns in the dataframe: %i' % (dataframe.shape[1]))
+    print('Number of rows in the dataframe: %i\n' % (dataframe.shape[0]))
+
+# Load data set containing all the data from csv
+wisdm_dataset = read_data('WISDM_ar_v1.1_raw.txt')
 
 
+#preprocessing WISDM dataset
+#normalising accelerometer values to be between 0 and 1
+wisdm_dataset['x-axis'] = wisdm_dataset['x-axis']/10
+wisdm_dataset['y-axis'] = wisdm_dataset['y-axis']/10
+wisdm_dataset['z-axis'] = wisdm_dataset['z-axis']/10
+
+
+
+indexNames = wisdm_dataset[ wisdm_dataset['activity'] == "Jogging" ].index
+ 
+# Delete these row indexes from dataFrame
+wisdm_dataset.drop(indexNames , inplace=True)
+
+
+
+#to confirm no empty dataframes are present
+w_df_jogging = pd.DataFrame()
+w_df_jogging = wisdm_dataset[wisdm_dataset['activity']=='Jogging']
+
+
+#renaming the wisdm dataset with the class names that classifier is trained in
+wisdm_dataset = wisdm_dataset.to_numpy()
+
+for i in range(0, len(wisdm_dataset)):
+    if wisdm_dataset[i][1] == "Walking":
+        wisdm_dataset[i][1] = "a_walk"
+    if wisdm_dataset[i][1] == "Upstairs":
+        wisdm_dataset[i][1] = "a_ascend"
+    if wisdm_dataset[i][1] == "Downstairs":
+        wisdm_dataset[i][1] = "a_descend"
+    if wisdm_dataset[i][1] == "Sitting":
+        wisdm_dataset[i][1] = "p_sit"
+    if wisdm_dataset[i][1] == "Standing":
+        wisdm_dataset[i][1] = "p_stand"
+        
+
+wisdm_dataset = pd.DataFrame(wisdm_dataset)
+wisdm_dataset.columns = ['user-id', 'activity', 'timestamp', 'x-axis', 'y-axis', 'z-axis']
+
+
+from sklearn.preprocessing import LabelEncoder
+WISDM_Label = LabelEncoder()
+wisdm_dataset['Test_Label'] = WISDM_Label.fit_transform(wisdm_dataset['activity'])
+WISDM_Label_Encoder_mapping = dict(zip(WISDM_Label.classes_, WISDM_Label.transform(WISDM_Label.classes_)))
+
+
+#segmenting the data
+WISDM_TEST_TIME_STEPS = 200
+WISDM_TEST_N_FEATURES = 3
+WISDM_TEST_STEP = 20
+
+wisdm_test_segments = []
+wisdm_test_labels = []
+
+for i in range(0, len(wisdm_dataset) - WISDM_TEST_TIME_STEPS, WISDM_TEST_STEP): #To give the starting point of each batch
+    w_t_xs = wisdm_dataset['x-axis'].values[i: i + WISDM_TEST_TIME_STEPS]
+    w_t_ys = wisdm_dataset['y-axis'].values[i: i + WISDM_TEST_TIME_STEPS]
+    w_t_zs = wisdm_dataset['z-axis'].values[i: i + WISDM_TEST_TIME_STEPS]
+    wisdm_test_label = stats.mode(wisdm_dataset['Test_Label'][i: i + WISDM_TEST_TIME_STEPS]) #this statement returns mode and count
+    wisdm_test_label = wisdm_test_label[0][0] #to ge value of mode
+    wisdm_test_segments.append([w_t_xs, w_t_ys, w_t_zs])
+    wisdm_test_labels.append(wisdm_test_label)
+
+    
+#reshaping our data
+wisdm_test_reshaped_segments = np.asarray(wisdm_test_segments, dtype = np.float32).reshape(-1, WISDM_TEST_TIME_STEPS, WISDM_TEST_N_FEATURES)
+#reshaped_segments.shape
+wisdm_test_labels = np.asarray(wisdm_test_labels)
+#Using one hot encoding
+#wisdm_test_labels = np.asarray(pd.get_dummies(wisdm_test_labels), dtype = np.float32)
+
+
+wisdm_X_test = wisdm_test_reshaped_segments
+wisdm_y_test = wisdm_test_labels
+wisdm_test_df = pd.DataFrame(wisdm_y_test)
+
+wisdm_y_pred = regressor.predict_classes(wisdm_X_test)
+
+print(accuracy_score(wisdm_y_test, wisdm_y_pred) * 100)
+
+wisdm_mat = confusion_matrix(wisdm_y_test, wisdm_y_pred)
+plot_confusion_matrix(conf_mat=wisdm_mat, class_names=Label.classes_, show_normed=True, figsize=(8,8))
 
 
 
