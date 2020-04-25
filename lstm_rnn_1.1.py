@@ -163,31 +163,37 @@ from keras.models import Sequential
 from keras.layers import Dense
 from keras.layers import LSTM
 from keras.layers import Dropout
+from keras.layers import BatchNormalization
 
 #Initialising the RNN
 regressor = Sequential()
 
 # Adding the first LSTM layer and some Dropout regularisation
 regressor.add(LSTM(units = 100, return_sequences = True, input_shape = (X_train.shape[1], 3)))
-regressor.add(Dropout(0.2))
+regressor.add(Dropout(0.25))
 
 # Adding a second LSTM layer and some Dropout regularisation
 regressor.add(LSTM(units = 100, return_sequences = True))
-regressor.add(Dropout(0.2))
+regressor.add(Dropout(0.25))
 
 # Adding a third LSTM layer and some Dropout regularisation
 regressor.add(LSTM(units = 100, return_sequences = True))
-regressor.add(Dropout(0.2))
+regressor.add(Dropout(0.25))
 
 # Adding a fourth LSTM layer and some Dropout regularisation
 regressor.add(LSTM(units = 100))
-regressor.add(Dropout(0.2))
+regressor.add(Dropout(0.25))
+
+#Adding Batch Normalisation
+regressor.add(BatchNormalization())
+regressor.add(Dropout(0.25))
 
 # Adding the output layer
 regressor.add(Dense(units = 5))
 
+
 # Compiling the RNN
-regressor.compile(optimizer = 'adam', loss = 'mean_squared_error')
+regressor.compile(optimizer = 'adam', loss = 'mean_squared_error', metrics=['accuracy'])
 
 # Fitting the RNN to the Training set
 regressor.fit(X_train, y_train, epochs = 100, batch_size = 32)
@@ -214,7 +220,8 @@ for i in range(0, len(Test_set)-1):
 Test_set = pd.DataFrame(Test_set)
 Test_set.columns = ["User","Activity", "Timeframe", "X axis", "Y axis", "Z axis"]
 
-
+#Filling all empty values with preceding values
+Test_set['Activity'].fillna(method = 'ffill', inplace = True)
 
 TEST_TIME_STEPS = 200
 TEST_N_FEATURES = 3
@@ -417,6 +424,9 @@ wisdm_y_test = pd.DataFrame(wisdm_y_test)
 wisdm_y_test.columns = ["Activity"]
 
 accuracy(wisdm_y_test, wisdm_y_pred_list) 
+
+
+
 
 
 

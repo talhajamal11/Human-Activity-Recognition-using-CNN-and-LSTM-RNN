@@ -1,4 +1,5 @@
 import numpy as np
+import matplotlib.pyplot as plt
 import pandas as pd
 from scipy import interpolate
 
@@ -37,6 +38,7 @@ New_T = New_T.astype('int64')
 # find interpolation function
 interpolate_function = interpolate.interp1d(Old_T, X, axis = 0, fill_value="extrapolate")
 X_Final = interpolate_function((New_T))
+
 interpolate_function = interpolate.interp1d(Old_T, Y, axis = 0, fill_value="extrapolate")
 Y_Final = interpolate_function((New_T))
 
@@ -99,6 +101,7 @@ df_missing = Dataset[Dataset.isnull().any(axis=1)]
 #Filling all empty values with preceding values
 Dataset['New_Activity'].fillna(method = 'ffill', inplace = True)
 
+
 Dataset = Dataset[:-7]
 
 #to confirm no empty dataframes are present
@@ -123,22 +126,34 @@ for i in range(0, len(Dataset)-1):
 Dataset = pd.DataFrame(Dataset)
 Dataset.columns = ['New_Activity', 'New_Timeframe', 'X_Final', 'Y_Final', 'Z_Final']
 
+
 #Encoding the Activity
+#from sklearn.preprocessing import LabelEncoder
+#Label = LabelEncoder()
+#Dataset['Label'] = Label.fit_transform(Dataset['New_Activity'])
+
+#Label_Encoder_mapping = dict(zip(Label.classes_, Label.transform(Label.classes_)))
+
 from sklearn.preprocessing import LabelEncoder
 Label = LabelEncoder()
-Dataset['Label'] = Label.fit_transform(Dataset['New_Activity'])
+integer_encoded = Label.fit_transform(Dataset['New_Activity'])
+#Label_Encoder_mapping = dict(zip(Label.classes_, Label.transform(Label.classes_)))
 
-Label_Encoder_mapping = dict(zip(Label.classes_, Label.transform(Label.classes_)))
+from sklearn.preprocessing import OneHotEncoder
+ohe = OneHotEncoder(sparse = False)
+integer_encoded = integer_encoded.reshape(len(integer_encoded), 1)
+ohe = ohe.fit_transform(integer_encoded)
+
 
 #Adding Standardized Scaling to data
 X = Dataset[['X_Final', 'Y_Final', 'Z_Final']]
-y = Dataset[['Label']]
-
-from sklearn.preprocessing import StandardScaler
-scaler = StandardScaler()
-X = scaler.fit_transform(X)
+#y = Dataset[['Label']]
+y = np.asarray(ohe, dtype = np.float32)
+#from sklearn.preprocessing import StandardScaler
+#scaler = StandardScaler()
+#X = scaler.fit_transform(X)
 scaled_X = pd.DataFrame(data=X, columns = ['X_Final', 'Y_Final', 'Z_Final'])
-scaled_X['Label'] = y.values
+#scaled_X['Label'] = y
 
 
 #Feature Generation and Data Transformation
@@ -153,7 +168,8 @@ for i in range(0, len(Dataset) - TIME_STEPS, STEP): #To give the starting point 
     xs = scaled_X['X_Final'].values[i: i + TIME_STEPS]
     ys = scaled_X['Y_Final'].values[i: i + TIME_STEPS]
     zs = scaled_X['Z_Final'].values[i: i + TIME_STEPS]
-    label = stats.mode(scaled_X['Label'][i: i + TIME_STEPS]) #this statement returns mode and count
+    #label = stats.mode(scaled_X['Label'][i: i + TIME_STEPS]) #this statement returns mode and count
+    label = stats.mode(y[i: i + TIME_STEPS]) #this statement returns mode and count
     label = label[0][0] #to ge value of mode
     segments.append([xs, ys, zs])
     labels.append(label)
@@ -164,19 +180,39 @@ reshaped_segments = np.asarray(segments, dtype = np.float32).reshape(-1, TIME_ST
 labels = np.asarray(labels)
 
 
-"""#Using one hot encoding
-l = pd.DataFrame(labels)
-l_one_hot = pd.get_dummies(l)
-
-labels_columns = l_one_hot.idxmax(axis = 1)
-
-labels = np.asarray(pd.get_dummies(labels), dtype = np.float32) 
-"""
-#labels.shape
-
 X_train = reshaped_segments
 y_train = labels
 
+"""
+#plotting graphs for accelerometer values of each activity
+activities = Dataset['New_Activity'].value_counts().index
+Fs = 20
+
+time = np.arange(0, 10, 0.05)
+
+
+def plot_activity(activity, Dataset):
+    fig, (ax0, ax1, ax2) = plot.subplots(nrows=3, figsize=(10, 7), sharex=True)
+    plot_axis(ax0, time, Dataset['X_Final'], 'X-Axis')
+    plot_axis(ax1, time, Dataset['Y_Final'], 'Y-Axis')
+    plot_axis(ax2, time, Dataset['Z_Final'], 'Z-Axis')
+    plot.subplots_adjust(hspace=0.2)
+    fig.suptitle(activity)
+    plot.subplots_adjust(top=0.90)
+    plot.show()
+
+def plot_axis(ax, x, y, title):
+    ax.plot(x, y, 'g')
+    ax.set_title(title)
+    ax.xaxis.set_visible(False)
+    ax.set_ylim([min(y) - np.std(y), max(y) + np.std(y)])
+    ax.set_xlim([min(x), max(x)])
+    ax.grid(True)
+
+for activity in activities:
+    data_for_plot = Dataset[(Dataset['New_Activity'] == activity)][:Fs*10]
+    plot_activity(activity, data_for_plot)
+"""
 
 #Importing Test Set
 
@@ -209,27 +245,37 @@ df_missing = Test_set[Test_set.isnull().any(axis=1)]
 #Filling all empty values with preceding values
 Test_set['New_Activity'].fillna(method = 'ffill', inplace = True)
 
-#Encoding the Activities
+
 #Test_set.Activity.apply(str)
 Test_set['New_Activity'] = Test_set.New_Activity.astype(str)
-from sklearn.preprocessing import LabelEncoder
+
+#Encoding the Activities
+
+#from sklearn.preprocessing import LabelEncoder
+#Test_Label = LabelEncoder()
+#Test_set['Test_Label'] = Test_Label.fit_transform(Test_set['New_Activity'])
+#Test_Label_Encoder_mapping = dict(zip(Test_Label.classes_, Test_Label.transform(Test_Label.classes_)))
+
+from sklearn.preprocessing import LabelEncoder, OneHotEncoder
 Test_Label = LabelEncoder()
-Test_set['Test_Label'] = Test_Label.fit_transform(Test_set['New_Activity'])
+test_integer_encoded = Test_Label.fit_transform(Test_set['New_Activity'])
 Test_Label_Encoder_mapping = dict(zip(Test_Label.classes_, Test_Label.transform(Test_Label.classes_)))
 
-
-
+test_ohe = OneHotEncoder(sparse = False)
+test_integer_encoded = test_integer_encoded.reshape(len(test_integer_encoded), 1)
+test_ohe = test_ohe.fit_transform(test_integer_encoded)
 
 
 #Scaling the data
 test_X = Test_set[['X axis', 'Y axis', 'Z axis']]
-test_y = Test_set[['Test_Label']]
+#test_y = Test_set[['Test_Label']]
+test_y = np.asarray(test_ohe, dtype = np.float32)
 
-from sklearn.preprocessing import StandardScaler
-scaler = StandardScaler()
-test_X = scaler.fit_transform(test_X)
+#from sklearn.preprocessing import StandardScaler
+#scaler = StandardScaler()
+#test_X = scaler.fit_transform(test_X)
 test_scaled_X = pd.DataFrame(data=test_X, columns = ['X axis', 'Y axis', 'Z axis'])
-test_scaled_X['Test_Label'] = test_y.values
+#test_scaled_X['Test_Label'] = test_y.values
 
 TEST_TIME_STEPS = 200
 TEST_N_FEATURES = 3
@@ -242,7 +288,8 @@ for i in range(0, len(Test_set) - TEST_TIME_STEPS, TEST_STEP): #To give the star
     t_xs = test_scaled_X['X axis'].values[i: i + TEST_TIME_STEPS]
     t_ys = test_scaled_X['Y axis'].values[i: i + TEST_TIME_STEPS]
     t_zs = test_scaled_X['Z axis'].values[i: i + TEST_TIME_STEPS]
-    test_label = stats.mode(test_scaled_X['Test_Label'][i: i + TEST_TIME_STEPS]) #this statement returns mode and count
+    #test_label = stats.mode(test_scaled_X['Test_Label'][i: i + TEST_TIME_STEPS]) #this statement returns mode and count
+    test_label = stats.mode(test_y[i: i + TEST_TIME_STEPS]) #this statement returns mode and count
     test_label = test_label[0][0] #to ge value of mode
     test_segments.append([t_xs, t_ys, t_zs])
     test_labels.append(test_label)
@@ -252,91 +299,102 @@ for i in range(0, len(Test_set) - TEST_TIME_STEPS, TEST_STEP): #To give the star
 test_reshaped_segments = np.asarray(test_segments, dtype = np.float32).reshape(-1, TEST_TIME_STEPS, TEST_N_FEATURES)
 test_labels = np.asarray(test_labels)
 
-#Using one hot encoding
-#test_labels = np.asarray(pd.get_dummies(test_labels), dtype = np.float32)
-
 X_test = test_reshaped_segments
 y_test = test_labels
 
 test_df = pd.DataFrame(y_test)
 
 
-#Importing Keras libraries and packages
-import keras.backend as K
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense
-from tensorflow.keras.layers import Flatten
-from tensorflow.keras.layers import Dropout
-from tensorflow.keras.layers import BatchNormalization
-from tensorflow.keras.layers import Conv1D
-#from tensorflow.keras.layers import MaxPooling1D
-from keras.layers.convolutional import MaxPooling1D
-from keras.utils import to_categorical
+#Building the LSTM RNN Model
+from keras.models import Sequential
+from keras.layers import Dense
+from keras.layers import LSTM
+from keras.layers import Dropout
+from keras.layers import BatchNormalization
 
-#LRP
-
-import warnings
-warnings.simplefilter('ignore')
-import matplotlib.pyplot as plot
-import os
-
-import keras
-import keras.backend
-import keras.layers
-import keras.models
-
-
-verbose, epochs, batch_size = 0, 100, 32
-n_timesteps, n_features, n_outputs = X_train.shape[1], X_train.shape[2], 5
-
-
-import tensorflow as tf
-"""
-tf.compat.v1.disable_eager_execution()
-tf.keras.backend.clear_session()
-
-
-graph = tf.compat.v1.get_default_graph()
-global graph
-"""
-
+#Initialising the RNN
 regressor = Sequential()
-regressor.add(Conv1D(filters = 32, kernel_size = 5, activation='relu', input_shape=(n_timesteps, n_features)))
-regressor.add(Dropout(0.1))
+
+# Adding the first LSTM layer and some Dropout regularisation
+regressor.add(LSTM(units = 100, return_sequences = True, input_shape = (X_train.shape[1], 3)))
+regressor.add(Dropout(0.25))
+
+# Adding a second LSTM layer and some Dropout regularisation
+regressor.add(LSTM(units = 100, return_sequences = True))
+regressor.add(Dropout(0.25))
+
+# Adding a third LSTM layer and some Dropout regularisation
+regressor.add(LSTM(units = 100, return_sequences = True))
+regressor.add(Dropout(0.25))
+
+# Adding a fourth LSTM layer and some Dropout regularisation
+regressor.add(LSTM(units = 100))
+regressor.add(Dropout(0.25))
+
+#Adding Batch Normalisation
+regressor.add(BatchNormalization())
+regressor.add(Dropout(0.25))
+
+# Adding the output layer
+regressor.add(Dense(units = 5))
 
 
-regressor.add(Conv1D(filters=64, kernel_size=5, activation='relu'))
-regressor.add(Dropout(0.2))
+# Compiling the RNN
+regressor.compile(optimizer = 'adam', loss = 'mean_squared_error', metrics=['accuracy'])
 
-regressor.add(tf.compat.v1.layers.MaxPooling1D(pool_size=2))
-
-regressor.add(Flatten())
-
-regressor.add(Dense(100, activation='relu'))
-regressor.add(Dropout(0.5))
-
-regressor.add(Dense(5, activation='softmax'))
-
-regressor.compile(optimizer = 'Adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
-
-#Fitting the Model
-
-regressor.fit(X_train, y_train, epochs=epochs, batch_size=batch_size, validation_data= (X_test, y_test) ,verbose = 1)
+# Fitting the RNN to the Training set
+history = regressor.fit(X_train, y_train, epochs = 42, batch_size = 32, validation_data= (X_test, y_test))
 
 
-from mlxtend.plotting import plot_confusion_matrix
+
+#from mlxtend.plotting import plot_confusion_matrix
+
 from sklearn.metrics import confusion_matrix
 from sklearn.metrics import accuracy_score
 
 y_pred = regressor.predict_classes(X_test)
+y_test = np.argmax(y_test, axis=1)
 
 print(accuracy_score(y_test, y_pred) * 100)
 
-#mat = confusion_matrix(y_test, y_pred)
-#plot_confusion_matrix(conf_mat=mat, class_names=Label.classes_, show_normed=True, figsize=(7,7), colorbar=True, show_absolute=False)
+mat = confusion_matrix(y_test, y_pred)
+
+from mlxtend.plotting import plot_confusion_matrix
+plot_confusion_matrix(conf_mat=mat, class_names=Label.classes_, show_normed=True, figsize=(40,40), colorbar=True, show_absolute=True)
 
 
 
+#plotting accuracy and loss curves
+#Change code slightly later
+"""
+import matplotlib.pyplot as plot
+
+def plot_AccuracyCurve(history, epochs):
+  # Plot training & validation accuracy values
+  epoch_range = range(1, epochs+1)
+  plot.plot(epoch_range, history.history['acc'])
+  plot.plot(epoch_range, history.history['val_acc'])
+  plot.title('Model accuracy')
+  plot.ylabel('Accuracy')
+  plot.xlabel('Epoch')
+  plot.legend(['Train', 'Val'], loc='upper left')
+  plot.show()
+  
+  
+def plot_LossCurve(historu, epochs): 
+  # Plot training & validation loss values
+  epoch_range = range(1, epochs+1)
+  plot.plot(epoch_range, history.history['loss'])
+  plot.plot(epoch_range, history.history['val_loss'])
+  plot.title('Model loss')
+  plot.ylabel('Loss')
+  plot.xlabel('Epoch')
+  plot.legend(['Train', 'Val'], loc='upper left')
+  plot.show()
+
+plot_AccuracyCurve(history, 100)
+plot_LossCurve(history, 100)
+"""
 
 
 
@@ -428,23 +486,26 @@ wisdm_dataset.columns = ['user-id', 'activity', 'timestamp', 'x-axis', 'y-axis',
 
 from sklearn.preprocessing import LabelEncoder
 WISDM_Label = LabelEncoder()
-wisdm_dataset['Test_Label'] = WISDM_Label.fit_transform(wisdm_dataset['activity'])
-WISDM_Label_Encoder_mapping = dict(zip(WISDM_Label.classes_, WISDM_Label.transform(WISDM_Label.classes_)))
+wisdm_integer_encoded = WISDM_Label.fit_transform(wisdm_dataset['activity'])
 
+#wisdm_dataset['Test_Label'] = WISDM_Label.fit_transform(wisdm_dataset['activity'])
+#WISDM_Label_Encoder_mapping = dict(zip(WISDM_Label.classes_, WISDM_Label.transform(WISDM_Label.classes_)))
+
+from sklearn.preprocessing import OneHotEncoder
+wisdm_ohe = OneHotEncoder(sparse = False)
+wisdm_integer_encoded = wisdm_integer_encoded.reshape(len(wisdm_integer_encoded), 1)
+wisdm_ohe = wisdm_ohe.fit_transform(wisdm_integer_encoded)
 
 
 #Scaling the data
 wisdm_test_X = wisdm_dataset[['x-axis', 'y-axis', 'z-axis']]
-wisdm_test_y = wisdm_dataset[['Test_Label']]
+wisdm_test_y = np.asarray(wisdm_ohe, dtype = np.float32)
 
-from sklearn.preprocessing import StandardScaler
-scaler = StandardScaler()
-wisdm_test_X = scaler.fit_transform(wisdm_test_X)
+#from sklearn.preprocessing import StandardScaler
+#scaler = StandardScaler()
+#wisdm_test_X = scaler.fit_transform(wisdm_test_X)
 wisdm_test_scaled_X = pd.DataFrame(data=wisdm_test_X, columns = ['x-axis', 'y-axis', 'z-axis'])
-wisdm_test_scaled_X['Test_Label'] = wisdm_test_y.values
-
-
-
+#wisdm_test_scaled_X['Test_Label'] = wisdm_test_y.values
 
 #segmenting the data
 WISDM_TEST_TIME_STEPS = 200
@@ -458,18 +519,17 @@ for i in range(0, len(wisdm_dataset) - WISDM_TEST_TIME_STEPS, WISDM_TEST_STEP): 
     w_t_xs = wisdm_test_scaled_X['x-axis'].values[i: i + WISDM_TEST_TIME_STEPS]
     w_t_ys = wisdm_test_scaled_X['y-axis'].values[i: i + WISDM_TEST_TIME_STEPS]
     w_t_zs = wisdm_test_scaled_X['z-axis'].values[i: i + WISDM_TEST_TIME_STEPS]
-    wisdm_test_label = stats.mode(wisdm_test_scaled_X['Test_Label'][i: i + WISDM_TEST_TIME_STEPS]) #this statement returns mode and count
+    wisdm_test_label = stats.mode(wisdm_test_y[i: i + WISDM_TEST_TIME_STEPS]) #this statement returns mode and count
     wisdm_test_label = wisdm_test_label[0][0] #to ge value of mode
     wisdm_test_segments.append([w_t_xs, w_t_ys, w_t_zs])
     wisdm_test_labels.append(wisdm_test_label)
 
+ 
     
 #reshaping our data
 wisdm_test_reshaped_segments = np.asarray(wisdm_test_segments, dtype = np.float32).reshape(-1, WISDM_TEST_TIME_STEPS, WISDM_TEST_N_FEATURES)
 #reshaped_segments.shape
 wisdm_test_labels = np.asarray(wisdm_test_labels)
-#Using one hot encoding
-#wisdm_test_labels = np.asarray(pd.get_dummies(wisdm_test_labels), dtype = np.float32)
 
 
 wisdm_X_test = wisdm_test_reshaped_segments
@@ -478,121 +538,13 @@ wisdm_test_df = pd.DataFrame(wisdm_y_test)
 
 wisdm_y_pred = regressor.predict_classes(wisdm_X_test)
 
+
+wisdm_y_test = np.argmax(wisdm_y_test, axis=1)
+
 print(accuracy_score(wisdm_y_test, wisdm_y_pred) * 100)
 
-#wisdm_mat = confusion_matrix(wisdm_y_test, wisdm_y_pred)
-#plot_confusion_matrix(conf_mat=wisdm_mat, class_names=Label.classes_, show_normed=True, figsize=(8,8))
-
-"""
-import innvestigate
-import innvestigate.utils as iutils
-
-#import tensorflow as tf
-#tf.compat.v1.disable_eager_execution()
-#tf.keras.backend.clear_session()
-
-model = regressor
+wisdm_mat = confusion_matrix(wisdm_y_test, wisdm_y_pred)
+plot_confusion_matrix(conf_mat=wisdm_mat, class_names=Label.classes_, show_normed=True, figsize=(30,30), show_absolute=True, colorbar=True)
 
 
-#graph = tf.compat.v1.get_default_graph()
-#global graph
 
-model_wo_sm = iutils.keras.graph.model_wo_softmax(model)
-
-data_size = 200
-
-resultA = np.zeros((data_size, X_test.shape[2])).reshape(1,data_size,X_test.shape[2])
-resultT = np.zeros((data_size, X_test.shape[2])).reshape(1,data_size,X_test.shape[2])
-rezimage = np.zeros((data_size, X_test.shape[2])).reshape(1,data_size,X_test.shape[2])
-
-#import tensorflow as tf
-#tf.compat.v1.disable_eager_execution()
-#tf.keras.backend.clear_session()
-#
-#graph = tf.compat.v1.get_default_graph()
-#global graph
-tf.compat.v1.disable_v2_behavior()
-
-
-for n in range(X_test.shape[0]):
-    image = X_test[n:n+1]
-    correct_class = y_test[n]
-    prediction_class = y_pred[n]
-    #Creating LRP analyser
-    LRP_epsilon = innvestigate.analyzer.relevance_based.relevance_analyzer.LRPEpsilon(model, epsilon=1e-07, bias=True, neuron_selection_mode="index")
-    #Applying the analyzer
-    
-    analysisT = LRP_epsilon.analyze(image, 0)
-    analysisA = LRP_epsilon.analyze(image, 1)
-    
-    resultT = np.vstack((resultT,analysisT))
-    resultA = np.vstack((resultA,analysisA))        
-    imageraw = X_test[n:n+1]
-    rezimage = np.vstack((rezimage,imageraw)) 
-    
-
-print("1")
-
-
-    
-
-
-#
-## 0 - x_coordiate, 1 - y_coordiate, 2 - z_coordiate, 3 - velocity_data, 4 - acceleration_data, 5 - jerk_data, 6 - azimuth, 7 - elevation, 8 - roll  
-#
-#  
-#      
-#fig_X = plot.figure()
-#ax = fig.add_subplot(9, 1, x+1)
-#
-#ax.set_title('True_label='+str(int(correct_class))+', predicted_label='+str(predicted_class))
-#         
-#    
-#ax.set_ylabel(X_axis)
-#ax.set_yticklabels([])
-#ax.plot(analysis2[:,:,x].squeeze())
-#
-#
-##    ax2 = fig.add_subplot(9, 1, x+1)
-##    ax2.set_yticklabels([])
-##    ax2.plot(image[:,:,x].squeeze())
-#
-#
-#
-#
-#
-#plot.figure(1)
-#plot.plot(image.squeeze())
-#plot.ylabel('Vertical amplitude')
-#plot.title('True label = %f, %f' %correct_class, predicted_class)
-#plot.title('True_label='+str(int(class_correct))+', predicted_label='+str(class_predicted))
-#
-#plot.figure(2)
-#plot.plot(analysis2.squeeze())
-#plot.ylabel('LRP_epsilon relevance')
-#
-#
-#
-## Creating an analyzer
-#gradient_analyzer = innvestigate.create_analyzer("gradient", model)
-#
-#import tensorflow as tf
-#tf.compat.v1.disable_eager_execution()
-#tf.keras.backend.clear_session()
-#graph = tf.compat.v1.get_default_graph()
-#import keras.backend as K
-#K.clear_session()
-#global graph
-#
-#
-#
-#analysis = gradient_analyzer.analyze(X_test)
-#
-#
-#
-#
-#analyzer = innvestigate.create_analyzer("lrp.z", model)
-#
-#analysis = analyzer.analyze(X_test)
-#
-"""

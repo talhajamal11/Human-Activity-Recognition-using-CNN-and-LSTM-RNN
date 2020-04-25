@@ -163,19 +163,42 @@ reshaped_segments = np.asarray(segments, dtype = np.float32).reshape(-1, TIME_ST
 
 labels = np.asarray(labels)
 
-
-"""#Using one hot encoding
-l = pd.DataFrame(labels)
-l_one_hot = pd.get_dummies(l)
-
-labels_columns = l_one_hot.idxmax(axis = 1)
-
-labels = np.asarray(pd.get_dummies(labels), dtype = np.float32) 
-"""
 #labels.shape
 
 X_train = reshaped_segments
 y_train = labels
+
+"""
+#plotting graphs for accelerometer values of each activity
+activities = Dataset['New_Activity'].value_counts().index
+Fs = 20
+
+time = np.arange(0, 10, 0.05)
+
+
+def plot_activity(activity, Dataset):
+    fig, (ax0, ax1, ax2) = plot.subplots(nrows=3, figsize=(10, 7), sharex=True)
+    plot_axis(ax0, time, Dataset['X_Final'], 'X-Axis')
+    plot_axis(ax1, time, Dataset['Y_Final'], 'Y-Axis')
+    plot_axis(ax2, time, Dataset['Z_Final'], 'Z-Axis')
+    plot.subplots_adjust(hspace=0.2)
+    fig.suptitle(activity)
+    plot.subplots_adjust(top=0.90)
+    plot.show()
+
+def plot_axis(ax, x, y, title):
+    ax.plot(x, y, 'g')
+    ax.set_title(title)
+    ax.xaxis.set_visible(False)
+    ax.set_ylim([min(y) - np.std(y), max(y) + np.std(y)])
+    ax.set_xlim([min(x), max(x)])
+    ax.grid(True)
+
+for activity in activities:
+    data_for_plot = Dataset[(Dataset['New_Activity'] == activity)][:Fs*10]
+    plot_activity(activity, data_for_plot)
+"""
+
 
 
 #Importing Test Set
@@ -252,25 +275,22 @@ for i in range(0, len(Test_set) - TEST_TIME_STEPS, TEST_STEP): #To give the star
 test_reshaped_segments = np.asarray(test_segments, dtype = np.float32).reshape(-1, TEST_TIME_STEPS, TEST_N_FEATURES)
 test_labels = np.asarray(test_labels)
 
-#Using one hot encoding
-#test_labels = np.asarray(pd.get_dummies(test_labels), dtype = np.float32)
-
 X_test = test_reshaped_segments
 y_test = test_labels
 
 test_df = pd.DataFrame(y_test)
 
-
 #Importing Keras libraries and packages
-import keras.backend as K
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense
-from tensorflow.keras.layers import Flatten
-from tensorflow.keras.layers import Dropout
-from tensorflow.keras.layers import BatchNormalization
-from tensorflow.keras.layers import Conv1D
+#import keras.backend as K
+from keras.models import Sequential
+from keras.layers import Dense
+from keras.layers import Flatten
+from keras.layers import Dropout
+from keras.layers import BatchNormalization
+from keras.layers import Conv1D
+from keras.layers import MaxPooling1D
 #from tensorflow.keras.layers import MaxPooling1D
-from keras.layers.convolutional import MaxPooling1D
+#from keras.layers.convolutional import MaxPooling1D
 from keras.utils import to_categorical
 
 #LRP
@@ -280,25 +300,16 @@ warnings.simplefilter('ignore')
 import matplotlib.pyplot as plot
 import os
 
-import keras
-import keras.backend
-import keras.layers
-import keras.models
+#import keras
+#import keras.backend
+#import keras.layers
+#import keras.models
 
 
 verbose, epochs, batch_size = 0, 100, 32
 n_timesteps, n_features, n_outputs = X_train.shape[1], X_train.shape[2], 5
 
-
-import tensorflow as tf
-"""
-tf.compat.v1.disable_eager_execution()
-tf.keras.backend.clear_session()
-
-
-graph = tf.compat.v1.get_default_graph()
-global graph
-"""
+#import tensorflow as tf
 
 regressor = Sequential()
 regressor.add(Conv1D(filters = 32, kernel_size = 5, activation='relu', input_shape=(n_timesteps, n_features)))
@@ -308,7 +319,7 @@ regressor.add(Dropout(0.1))
 regressor.add(Conv1D(filters=64, kernel_size=5, activation='relu'))
 regressor.add(Dropout(0.2))
 
-regressor.add(tf.compat.v1.layers.MaxPooling1D(pool_size=2))
+regressor.add(MaxPooling1D(pool_size=2))
 
 regressor.add(Flatten())
 
@@ -321,10 +332,11 @@ regressor.compile(optimizer = 'Adam', loss='sparse_categorical_crossentropy', me
 
 #Fitting the Model
 
-regressor.fit(X_train, y_train, epochs=epochs, batch_size=batch_size, validation_data= (X_test, y_test) ,verbose = 1)
+history = regressor.fit(X_train, y_train, epochs=epochs, batch_size=batch_size, validation_data= (X_test, y_test) ,verbose = 1)
 
 
 from mlxtend.plotting import plot_confusion_matrix
+
 from sklearn.metrics import confusion_matrix
 from sklearn.metrics import accuracy_score
 
@@ -332,14 +344,37 @@ y_pred = regressor.predict_classes(X_test)
 
 print(accuracy_score(y_test, y_pred) * 100)
 
-#mat = confusion_matrix(y_test, y_pred)
-#plot_confusion_matrix(conf_mat=mat, class_names=Label.classes_, show_normed=True, figsize=(7,7), colorbar=True, show_absolute=False)
+mat = confusion_matrix(y_test, y_pred)
+plot_confusion_matrix(conf_mat=mat, class_names=Label.classes_, show_normed=True, figsize=(40,40), colorbar=True, show_absolute=True)
 
 
+#plotting accuracy and loss curves
+#Change code slightly later
+def plot_AccuracyCurve(history, epochs):
+  # Plot training & validation accuracy values
+  epoch_range = range(1, epochs+1)
+  plot.plot(epoch_range, history.history['acc'])
+  plot.plot(epoch_range, history.history['val_acc'])
+  plot.title('Model accuracy')
+  plot.ylabel('Accuracy')
+  plot.xlabel('Epoch')
+  plot.legend(['Train', 'Val'], loc='upper left')
+  plot.show()
+  
+  
+def plot_LossCurve(history, epochs): 
+  # Plot training & validation loss values
+  epoch_range = range(1, epochs+1)
+  plot.plot(epoch_range, history.history['loss'])
+  plot.plot(epoch_range, history.history['val_loss'])
+  plot.title('Model loss')
+  plot.ylabel('Loss')
+  plot.xlabel('Epoch')
+  plot.legend(['Train', 'Val'], loc='upper left')
+  plot.show()
 
-
-
-
+plot_AccuracyCurve(history, 100)
+plot_LossCurve(history, 100)
 
 #Testing on the WISDM Dataset
 
@@ -468,8 +503,6 @@ for i in range(0, len(wisdm_dataset) - WISDM_TEST_TIME_STEPS, WISDM_TEST_STEP): 
 wisdm_test_reshaped_segments = np.asarray(wisdm_test_segments, dtype = np.float32).reshape(-1, WISDM_TEST_TIME_STEPS, WISDM_TEST_N_FEATURES)
 #reshaped_segments.shape
 wisdm_test_labels = np.asarray(wisdm_test_labels)
-#Using one hot encoding
-#wisdm_test_labels = np.asarray(pd.get_dummies(wisdm_test_labels), dtype = np.float32)
 
 
 wisdm_X_test = wisdm_test_reshaped_segments
@@ -480,10 +513,12 @@ wisdm_y_pred = regressor.predict_classes(wisdm_X_test)
 
 print(accuracy_score(wisdm_y_test, wisdm_y_pred) * 100)
 
-#wisdm_mat = confusion_matrix(wisdm_y_test, wisdm_y_pred)
-#plot_confusion_matrix(conf_mat=wisdm_mat, class_names=Label.classes_, show_normed=True, figsize=(8,8))
+wisdm_mat = confusion_matrix(wisdm_y_test, wisdm_y_pred)
+plot_confusion_matrix(conf_mat=wisdm_mat, class_names=Label.classes_, show_normed=True, figsize=(30,30), show_absolute=True, colorbar=True)
+
 
 """
+
 import innvestigate
 import innvestigate.utils as iutils
 
@@ -497,7 +532,7 @@ model = regressor
 #graph = tf.compat.v1.get_default_graph()
 #global graph
 
-model_wo_sm = iutils.keras.graph.model_wo_softmax(model)
+model = innvestigate.utils.model_wo_softmax(model)
 
 data_size = 200
 
@@ -511,10 +546,10 @@ rezimage = np.zeros((data_size, X_test.shape[2])).reshape(1,data_size,X_test.sha
 #
 #graph = tf.compat.v1.get_default_graph()
 #global graph
-tf.compat.v1.disable_v2_behavior()
+#tf.compat.v1.disable_v2_behavior()
 
 
-for n in range(X_test.shape[0]):
+for n in range(5):
     image = X_test[n:n+1]
     correct_class = y_test[n]
     prediction_class = y_pred[n]
@@ -536,42 +571,40 @@ print("1")
 
     
 
-
 #
 ## 0 - x_coordiate, 1 - y_coordiate, 2 - z_coordiate, 3 - velocity_data, 4 - acceleration_data, 5 - jerk_data, 6 - azimuth, 7 - elevation, 8 - roll  
 #
 #  
 #      
-#fig_X = plot.figure()
-#ax = fig.add_subplot(9, 1, x+1)
+fig_X = plot.figure()
+ax = fig_X.add_subplot(2, 1, 2)
 #
-#ax.set_title('True_label='+str(int(correct_class))+', predicted_label='+str(predicted_class))
+ax.set_title('True_label='+str(int(correct_class))+', predicted_label='+str(prediction_class))
 #         
 #    
-#ax.set_ylabel(X_axis)
-#ax.set_yticklabels([])
-#ax.plot(analysis2[:,:,x].squeeze())
+#ax.set_ylabel(X_test)
+ax.set_yticklabels([])
+ax.plot(analysisA[:,:,0].squeeze())
 #
 #
-##    ax2 = fig.add_subplot(9, 1, x+1)
-##    ax2.set_yticklabels([])
-##    ax2.plot(image[:,:,x].squeeze())
+ax2 = fig_X.add_subplot(2, 1,2)
+ax2.set_yticklabels([])
+ax2.plot(image[:,:,0].squeeze())
 #
 #
 #
 #
 #
-#plot.figure(1)
-#plot.plot(image.squeeze())
-#plot.ylabel('Vertical amplitude')
-#plot.title('True label = %f, %f' %correct_class, predicted_class)
-#plot.title('True_label='+str(int(class_correct))+', predicted_label='+str(class_predicted))
-#
-#plot.figure(2)
-#plot.plot(analysis2.squeeze())
-#plot.ylabel('LRP_epsilon relevance')
-#
-#
+plot.figure(1)
+plot.plot(image.squeeze())
+plot.ylabel('Vertical amplitude')
+plot.title('True label = %f, %f' %correct_class, predicted_class)
+plot.title('True_label='+str(int(class_correct))+', predicted_label='+str(class_predicted))
+
+plot.figure(2)
+plot.plot(analysisT.squeeze())
+plot.ylabel('LRP_epsilon relevance')
+"""
 #
 ## Creating an analyzer
 #gradient_analyzer = innvestigate.create_analyzer("gradient", model)
@@ -595,4 +628,3 @@ print("1")
 #
 #analysis = analyzer.analyze(X_test)
 #
-"""
