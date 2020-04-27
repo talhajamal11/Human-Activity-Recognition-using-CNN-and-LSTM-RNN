@@ -381,7 +381,7 @@ def plot_AccuracyCurve(history, epochs):
   plot.show()
   
   
-def plot_LossCurve(historu, epochs): 
+def plot_LossCurve(history, epochs): 
   # Plot training & validation loss values
   epoch_range = range(1, epochs+1)
   plot.plot(epoch_range, history.history['loss'])
