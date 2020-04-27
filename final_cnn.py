@@ -306,33 +306,32 @@ import os
 #import keras.models
 
 
-verbose, epochs, batch_size = 0, 100, 32
+verbose, epochs, batch_size = 0, 20, 32
 n_timesteps, n_features, n_outputs = X_train.shape[1], X_train.shape[2], 5
 
 #import tensorflow as tf
 
-regressor = Sequential()
-regressor.add(Conv1D(filters = 32, kernel_size = 5, activation='relu', input_shape=(n_timesteps, n_features)))
-regressor.add(Dropout(0.1))
+model = Sequential()
+model.add(Conv1D(filters = 32, kernel_size = 5, activation='relu', input_shape=(n_timesteps, n_features)))
+model.add(Dropout(0.5))
 
+model.add(Conv1D(filters=64, kernel_size=5, activation='relu'))
+model.add(Dropout(0.5))
 
-regressor.add(Conv1D(filters=64, kernel_size=5, activation='relu'))
-regressor.add(Dropout(0.2))
+model.add(MaxPooling1D(pool_size=2))
 
-regressor.add(MaxPooling1D(pool_size=2))
+model.add(Flatten())
 
-regressor.add(Flatten())
+model.add(Dense(100, activation='relu'))
+model.add(Dropout(0.5))
 
-regressor.add(Dense(100, activation='relu'))
-regressor.add(Dropout(0.5))
+model.add(Dense(6, activation='softmax'))
 
-regressor.add(Dense(5, activation='softmax'))
-
-regressor.compile(optimizer = 'Adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
+model.compile(optimizer = 'Adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
 
 #Fitting the Model
 
-history = regressor.fit(X_train, y_train, epochs=epochs, batch_size=batch_size, validation_data= (X_test, y_test) ,verbose = 1)
+history = model.fit(X_train, y_train, epochs=epochs, batch_size=batch_size, validation_data= (X_test, y_test) ,verbose = 1)
 
 
 from mlxtend.plotting import plot_confusion_matrix
@@ -340,16 +339,14 @@ from mlxtend.plotting import plot_confusion_matrix
 from sklearn.metrics import confusion_matrix
 from sklearn.metrics import accuracy_score
 
-y_pred = regressor.predict_classes(X_test)
+y_pred = model.predict_classes(X_test)
 
-print(accuracy_score(y_test, y_pred) * 100)
+print("Accuracy on testing set:", accuracy_score(y_test, y_pred) * 100)
 
 mat = confusion_matrix(y_test, y_pred)
 plot_confusion_matrix(conf_mat=mat, class_names=Label.classes_, show_normed=True, figsize=(40,40), colorbar=True, show_absolute=True)
 
 
-#plotting accuracy and loss curves
-#Change code slightly later
 def plot_AccuracyCurve(history, epochs):
   # Plot training & validation accuracy values
   epoch_range = range(1, epochs+1)
@@ -373,8 +370,8 @@ def plot_LossCurve(history, epochs):
   plot.legend(['Train', 'Val'], loc='upper left')
   plot.show()
 
-plot_AccuracyCurve(history, 100)
-plot_LossCurve(history, 100)
+#plot_AccuracyCurve(history, epochs)
+#plot_LossCurve(history, epochs)
 
 #Testing on the WISDM Dataset
 
@@ -509,47 +506,29 @@ wisdm_X_test = wisdm_test_reshaped_segments
 wisdm_y_test = wisdm_test_labels
 wisdm_test_df = pd.DataFrame(wisdm_y_test)
 
-wisdm_y_pred = regressor.predict_classes(wisdm_X_test)
+wisdm_y_pred = model.predict_classes(wisdm_X_test)
 
-print(accuracy_score(wisdm_y_test, wisdm_y_pred) * 100)
+print("Accuracy on validation set: ", accuracy_score(wisdm_y_test, wisdm_y_pred) * 100)
+
 
 wisdm_mat = confusion_matrix(wisdm_y_test, wisdm_y_pred)
 plot_confusion_matrix(conf_mat=wisdm_mat, class_names=Label.classes_, show_normed=True, figsize=(30,30), show_absolute=True, colorbar=True)
 
 
-"""
 
 import innvestigate
 import innvestigate.utils as iutils
-
-#import tensorflow as tf
-#tf.compat.v1.disable_eager_execution()
-#tf.keras.backend.clear_session()
-
-model = regressor
-
-
-#graph = tf.compat.v1.get_default_graph()
-#global graph
 
 model = innvestigate.utils.model_wo_softmax(model)
 
 data_size = 200
 
-resultA = np.zeros((data_size, X_test.shape[2])).reshape(1,data_size,X_test.shape[2])
-resultT = np.zeros((data_size, X_test.shape[2])).reshape(1,data_size,X_test.shape[2])
+result1 = np.zeros((data_size, X_test.shape[2])).reshape(1,data_size,X_test.shape[2])
+result2 = np.zeros((data_size, X_test.shape[2])).reshape(1,data_size,X_test.shape[2])
 rezimage = np.zeros((data_size, X_test.shape[2])).reshape(1,data_size,X_test.shape[2])
 
-#import tensorflow as tf
-#tf.compat.v1.disable_eager_execution()
-#tf.keras.backend.clear_session()
-#
-#graph = tf.compat.v1.get_default_graph()
-#global graph
-#tf.compat.v1.disable_v2_behavior()
 
-
-for n in range(5):
+for n in range(1,13):
     image = X_test[n:n+1]
     correct_class = y_test[n]
     prediction_class = y_pred[n]
@@ -557,11 +536,12 @@ for n in range(5):
     LRP_epsilon = innvestigate.analyzer.relevance_based.relevance_analyzer.LRPEpsilon(model, epsilon=1e-07, bias=True, neuron_selection_mode="index")
     #Applying the analyzer
     
-    analysisT = LRP_epsilon.analyze(image, 0)
-    analysisA = LRP_epsilon.analyze(image, 1)
+    analysis1 = LRP_epsilon.analyze(image, 0)
+    analysis2 = LRP_epsilon.analyze(image, 1)
     
-    resultT = np.vstack((resultT,analysisT))
-    resultA = np.vstack((resultA,analysisA))        
+    result1 = np.vstack((result1,analysis1))
+    result2 = np.vstack((result2,analysis2))  
+      
     imageraw = X_test[n:n+1]
     rezimage = np.vstack((rezimage,imageraw)) 
     
@@ -571,40 +551,43 @@ print("1")
 
     
 
-#
-## 0 - x_coordiate, 1 - y_coordiate, 2 - z_coordiate, 3 - velocity_data, 4 - acceleration_data, 5 - jerk_data, 6 - azimuth, 7 - elevation, 8 - roll  
-#
-#  
-#      
-fig_X = plot.figure()
-ax = fig_X.add_subplot(2, 1, 2)
-#
-ax.set_title('True_label='+str(int(correct_class))+', predicted_label='+str(prediction_class))
-#         
-#    
-#ax.set_ylabel(X_test)
-ax.set_yticklabels([])
-ax.plot(analysisA[:,:,0].squeeze())
-#
-#
-ax2 = fig_X.add_subplot(2, 1,2)
-ax2.set_yticklabels([])
-ax2.plot(image[:,:,0].squeeze())
-#
-#
-#
-#
-#
+fig = plot.figure()
+for x in list(range(0,3)):
+    plot.style.use('classic')
+    ax = fig.add_subplot(3, 1, x+1)
+    
+    if x == 0:
+        a = 'X'
+        ax.set_title('LRP relevance with X, Y and Z axis accelerometer values')
+    elif x == 1:
+        a = 'Y'
+    elif x == 2:
+        a = 'Z'
+         
+    ax.set_ylabel(a)
+    #ax.plot(analysis1[:,:,x].squeeze(), label='LRP relevance')
+    #ax.legend(loc='upper right', frameon=False)
+    ax.plot(analysis2[:,:,x].squeeze(), label='LRP relevance')
+    ax.legend(loc='upper right', frameon=False)
+    ax = fig.add_subplot(3, 1, x+1)
+    ax.plot(image[:,:,x].squeeze(), label='Accelerometer value')
+    ax.legend(loc='upper right', frameon=False)
+
+"""
 plot.figure(1)
 plot.plot(image.squeeze())
 plot.ylabel('Vertical amplitude')
-plot.title('True label = %f, %f' %correct_class, predicted_class)
-plot.title('True_label='+str(int(class_correct))+', predicted_label='+str(class_predicted))
+#plot.title('True label = %f, %f' %correct_class, predicted_class)
+plot.title('True_label='+str(int(correct_class))+', predicted_label='+str(prediction_class))
 
 plot.figure(2)
-plot.plot(analysisT.squeeze())
+plot.plot(analysis1.squeeze())
 plot.ylabel('LRP_epsilon relevance')
-"""
+
+plot.figure(3)
+plot.plot(analysis2.squeeze())
+plot.ylabel('LRP_epsilon relevance')
+
 #
 ## Creating an analyzer
 #gradient_analyzer = innvestigate.create_analyzer("gradient", model)
@@ -628,3 +611,23 @@ plot.ylabel('LRP_epsilon relevance')
 #
 #analysis = analyzer.analyze(X_test)
 #
+
+
+#import tensorflow as tf
+#tf.compat.v1.disable_eager_execution()
+#tf.keras.backend.clear_session()
+#
+#graph = tf.compat.v1.get_default_graph()
+#global graph
+#tf.compat.v1.disable_v2_behavior()
+
+#import tensorflow as tf
+#tf.compat.v1.disable_eager_execution()
+#tf.keras.backend.clear_session()
+
+
+#graph = tf.compat.v1.get_default_graph()
+#global graph
+
+
+"""
