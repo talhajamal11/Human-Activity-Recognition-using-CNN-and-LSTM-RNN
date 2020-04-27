@@ -553,25 +553,36 @@ print("1")
 
 fig = plot.figure()
 for x in list(range(0,3)):
-    plot.style.use('classic')
-    ax = fig.add_subplot(3, 1, x+1)
+    #plot.style.use('classic')
+    ax1 = fig.add_subplot(3, 1, x+1)
     
     if x == 0:
-        a = 'X'
-        ax.set_title('LRP relevance with X, Y and Z axis accelerometer values')
+        a = 'X axis (g)'
+        ax1.set_title('LRP relevance with X, Y and Z axis accelerometer values')
     elif x == 1:
-        a = 'Y'
+        a = 'Y axis (g)'
     elif x == 2:
-        a = 'Z'
-         
-    ax.set_ylabel(a)
-    #ax.plot(analysis1[:,:,x].squeeze(), label='LRP relevance')
-    #ax.legend(loc='upper right', frameon=False)
-    ax.plot(analysis2[:,:,x].squeeze(), label='LRP relevance')
-    ax.legend(loc='upper right', frameon=False)
-    ax = fig.add_subplot(3, 1, x+1)
-    ax.plot(image[:,:,x].squeeze(), label='Accelerometer value')
-    ax.legend(loc='upper right', frameon=False)
+        a = 'Z axis (g)'
+
+    color = 'tab:green'
+    ax1 = fig.add_subplot(3, 1, x+1)
+    ax1.set_ylabel(a, color = 'black')
+    ax1.plot(image[:,:,x].squeeze(), label='Accelerometer value', color = color)
+    ax1.legend(loc='upper center', frameon=False)
+    ax1.tick_params(axis='y', labelcolor='black')
+        
+    ax2 = ax1.twinx()
+    color = 'tab:blue'
+    ax2.set_ylabel('LRP Relevance', color = 'black')
+    
+    ax2.plot(analysis1[:,:,x].squeeze(), label='LRP relevance', color = color)
+    ax2.legend(loc='upper right', frameon=False)
+    
+    #ax2.plot(analysis2[:,:,x].squeeze(), label='LRP relevance', color=color)
+    #ax2.legend(loc='upper right', frameon=False)
+    
+    ax2.tick_params(axis='y', labelcolor='black')
+
 
 """
 plot.figure(1)
