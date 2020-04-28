@@ -528,7 +528,7 @@ result2 = np.zeros((data_size, X_test.shape[2])).reshape(1,data_size,X_test.shap
 rezimage = np.zeros((data_size, X_test.shape[2])).reshape(1,data_size,X_test.shape[2])
 
 
-for n in range(1,13):
+for n in range(1,11):
     image = X_test[n:n+1]
     correct_class = y_test[n]
     prediction_class = y_pred[n]
@@ -547,7 +547,6 @@ for n in range(1,13):
     
 
 print("1")
-
 
     
 
