@@ -13,7 +13,7 @@ The following files were used for data preprocessing:
   1. Combining_Indidual_training_dataset.py
   2. Final_Training_Set.py
  
-The following files were generated as a result of that data preprocessing:
+The following files were generated as a result of that data preprocessing on the SPHERE dataset:
   1. final_training_set_10people.csv
-  2. final_training_set_8people.csv
-  3. final_test_set_2people.csv
+  2. final_training_set_8people.csv (used to train the model)
+  3. final_test_set_2people.csv (used to test the model)
