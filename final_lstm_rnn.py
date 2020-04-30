@@ -1,20 +1,24 @@
+#importing the required libraries
 import numpy as np
-import matplotlib.pyplot as plt
 import pandas as pd
 from scipy import interpolate
 
-import pickle # to serialise objects
+#import pickle # to serialise objects
 from scipy import stats
 import seaborn as sns
-from sklearn import metrics
-from sklearn.model_selection import train_test_split
+#from sklearn import metrics
+#from sklearn.model_selection import train_test_split
 
 sns.set(style='whitegrid', palette='muted', font_scale=1.5)
 RANDOM_SEED = 42
 
+#Importing the training dataset
+
 dataset_train = pd.read_csv('final_training_set_8people.csv')
 training_set = pd.DataFrame(dataset_train.iloc[:,:].values)
 training_set.columns = ["User","Activity", "Timeframe", "X axis", "Y axis", "Z axis"]
+
+#Resampling the training dataset
 
 X = training_set.iloc[:, 3]
 X = X.astype(float)
@@ -128,12 +132,6 @@ Dataset.columns = ['New_Activity', 'New_Timeframe', 'X_Final', 'Y_Final', 'Z_Fin
 
 
 #Encoding the Activity
-#from sklearn.preprocessing import LabelEncoder
-#Label = LabelEncoder()
-#Dataset['Label'] = Label.fit_transform(Dataset['New_Activity'])
-
-#Label_Encoder_mapping = dict(zip(Label.classes_, Label.transform(Label.classes_)))
-
 from sklearn.preprocessing import LabelEncoder
 Label = LabelEncoder()
 integer_encoded = Label.fit_transform(Dataset['New_Activity'])
@@ -145,7 +143,8 @@ integer_encoded = integer_encoded.reshape(len(integer_encoded), 1)
 ohe = ohe.fit_transform(integer_encoded)
 
 
-#Adding Standardized Scaling to data
+#Potentially Adding Standardized Scaling to data 
+
 X = Dataset[['X_Final', 'Y_Final', 'Z_Final']]
 #y = Dataset[['Label']]
 y = np.asarray(ohe, dtype = np.float32)
@@ -251,11 +250,6 @@ Test_set['New_Activity'] = Test_set.New_Activity.astype(str)
 
 #Encoding the Activities
 
-#from sklearn.preprocessing import LabelEncoder
-#Test_Label = LabelEncoder()
-#Test_set['Test_Label'] = Test_Label.fit_transform(Test_set['New_Activity'])
-#Test_Label_Encoder_mapping = dict(zip(Test_Label.classes_, Test_Label.transform(Test_Label.classes_)))
-
 from sklearn.preprocessing import LabelEncoder, OneHotEncoder
 Test_Label = LabelEncoder()
 test_integer_encoded = Test_Label.fit_transform(Test_set['New_Activity'])
@@ -266,7 +260,7 @@ test_integer_encoded = test_integer_encoded.reshape(len(test_integer_encoded), 1
 test_ohe = test_ohe.fit_transform(test_integer_encoded)
 
 
-#Scaling the data
+#Potentially Scaling the data
 test_X = Test_set[['X axis', 'Y axis', 'Z axis']]
 #test_y = Test_set[['Test_Label']]
 test_y = np.asarray(test_ohe, dtype = np.float32)
@@ -365,7 +359,7 @@ plot_confusion_matrix(conf_mat=mat, class_names=Label.classes_, show_normed=True
 
 
 #plotting accuracy and loss curves
-#Change code slightly later
+
 """
 import matplotlib.pyplot as plot
 
@@ -402,38 +396,37 @@ plot_LossCurve(history, 100)
 #Testing on the WISDM Dataset
 
 #Loading WISDM dataset for validation
-#change this code slightly to avoid plagiarism
-def read_data(file_path):
+#The code below from line 380 to 414 for extracting data from the WISDM text file 
+#is inspired by an online tutorial:
+#https://github.com/ni79ls/har-keras-cnn/blob/master/20180903_Keras_HAR_WISDM_CNN_v1.0_for_medium.py
+  
 
-    column_names = ['user-id',
-                    'activity',
-                    'timestamp',
-                    'x-axis',
-                    'y-axis',
-                    'z-axis']
-    df = pd.read_csv(file_path,
-                     header=None,
-                     names=column_names)
-    # Last column has a ";" character which must be removed ...
-    df['z-axis'].replace(regex=True,
-      inplace=True,
-      to_replace=r';',
-      value=r'')
-    # ... and then this column must be transformed to float explicitly
-    df['z-axis'] = df['z-axis'].apply(convert_to_float)
-    # This is very important otherwise the model will not fit and loss
-    # will show up as NAN
-    df.dropna(axis=0, how='any', inplace=True)
-
-    return df
-
+#function to return number as float
 def convert_to_float(x):
 
     try:
         return np.float(x)
     except:
         return np.nan
- 
+  
+#function to return data from the file in the correct format  
+def read_data(file_path):
+
+    column_names = ['user-id','activity','timestamp','x-axis','y-axis','z-axis']
+    df = pd.read_csv(file_path, header=None, names=column_names)
+    
+    # Last column has a ";" character which must be removed
+    df['z-axis'].replace(regex=True, inplace=True, to_replace=r';',value=r'')
+   
+    # ... and then this column must be transformed to float explicitly
+    df['z-axis'] = df['z-axis'].apply(convert_to_float)
+    
+    # This is very important otherwise the model will not fit and loss will show up as NAN
+    df.dropna(axis=0, how='any', inplace=True)
+
+    return df
+
+#function to get basic info from the dataframe passed to it
 def show_basic_dataframe_info(dataframe):
 
     # Shape and how many rows and columns
@@ -451,12 +444,9 @@ wisdm_dataset['y-axis'] = wisdm_dataset['y-axis']/10
 wisdm_dataset['z-axis'] = wisdm_dataset['z-axis']/10
 
 
-
+# Delete Jogging rows from dataFrame
 indexNames = wisdm_dataset[ wisdm_dataset['activity'] == "Jogging" ].index
- 
-# Delete these row indexes from dataFrame
 wisdm_dataset.drop(indexNames , inplace=True)
-
 
 
 #to confirm no empty dataframes are present
@@ -497,7 +487,7 @@ wisdm_integer_encoded = wisdm_integer_encoded.reshape(len(wisdm_integer_encoded)
 wisdm_ohe = wisdm_ohe.fit_transform(wisdm_integer_encoded)
 
 
-#Scaling the data
+#Potentially scaling the data
 wisdm_test_X = wisdm_dataset[['x-axis', 'y-axis', 'z-axis']]
 wisdm_test_y = np.asarray(wisdm_ohe, dtype = np.float32)
 
@@ -525,7 +515,6 @@ for i in range(0, len(wisdm_dataset) - WISDM_TEST_TIME_STEPS, WISDM_TEST_STEP): 
     wisdm_test_labels.append(wisdm_test_label)
 
  
-    
 #reshaping our data
 wisdm_test_reshaped_segments = np.asarray(wisdm_test_segments, dtype = np.float32).reshape(-1, WISDM_TEST_TIME_STEPS, WISDM_TEST_N_FEATURES)
 #reshaped_segments.shape
