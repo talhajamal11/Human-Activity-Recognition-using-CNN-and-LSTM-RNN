@@ -1,20 +1,23 @@
+#Importing required libraries
 import numpy as np
 import pandas as pd
 from scipy import interpolate
 
-import pickle # to serialise objects
+#import pickle # to serialise objects
 from scipy import stats
 import seaborn as sns
-from sklearn import metrics
-from sklearn.model_selection import train_test_split
+#from sklearn import metrics
+#from sklearn.model_selection import train_test_split
 
 sns.set(style='whitegrid', palette='muted', font_scale=1.5)
 RANDOM_SEED = 42
 
+#Importing the training dataset
 dataset_train = pd.read_csv('final_training_set_8people.csv')
 training_set = pd.DataFrame(dataset_train.iloc[:,:].values)
 training_set.columns = ["User","Activity", "Timeframe", "X axis", "Y axis", "Z axis"]
 
+#Resampling the data to 20Hz
 X = training_set.iloc[:, 3]
 X = X.astype(float)
 X = (X*1000000).astype('int64')
@@ -98,7 +101,7 @@ df_missing = Dataset[Dataset.isnull().any(axis=1)]
 
 #Filling all empty values with preceding values
 Dataset['New_Activity'].fillna(method = 'ffill', inplace = True)
-
+#removing extra rows in the end of the table
 Dataset = Dataset[:-7]
 
 #to confirm no empty dataframes are present
@@ -201,7 +204,7 @@ for activity in activities:
 
 
 
-#Importing Test Set
+#Importing the Test Set
 
 #Importing Test DataSet
 Test_set = pd.read_csv('final_test_set_2people.csv')
@@ -286,25 +289,18 @@ from keras.models import Sequential
 from keras.layers import Dense
 from keras.layers import Flatten
 from keras.layers import Dropout
-from keras.layers import BatchNormalization
+#from keras.layers import BatchNormalization
 from keras.layers import Conv1D
 from keras.layers import MaxPooling1D
 #from tensorflow.keras.layers import MaxPooling1D
 #from keras.layers.convolutional import MaxPooling1D
-from keras.utils import to_categorical
+#from keras.utils import to_categorical
 
 #LRP
 
 import warnings
 warnings.simplefilter('ignore')
 import matplotlib.pyplot as plot
-import os
-
-#import keras
-#import keras.backend
-#import keras.layers
-#import keras.models
-
 
 verbose, epochs, batch_size = 0, 20, 32
 n_timesteps, n_features, n_outputs = X_train.shape[1], X_train.shape[2], 5
@@ -347,6 +343,7 @@ mat = confusion_matrix(y_test, y_pred)
 plot_confusion_matrix(conf_mat=mat, class_names=Label.classes_, show_normed=True, figsize=(40,40), colorbar=True, show_absolute=True)
 
 
+#plotting the graph of accuracy against number of epochs
 def plot_AccuracyCurve(history, epochs):
   # Plot training & validation accuracy values
   epoch_range = range(1, epochs+1)
@@ -358,7 +355,7 @@ def plot_AccuracyCurve(history, epochs):
   plot.legend(['Train', 'Val'], loc='upper left')
   plot.show()
   
-  
+#plotting the graph of loss against number of epochs
 def plot_LossCurve(history, epochs): 
   # Plot training & validation loss values
   epoch_range = range(1, epochs+1)
@@ -376,38 +373,37 @@ def plot_LossCurve(history, epochs):
 #Testing on the WISDM Dataset
 
 #Loading WISDM dataset for validation
-#change this code slightly to avoid plagiarism
-def read_data(file_path):
+#The code below from line 380 to 414 for extracting data from the WISDM text file 
+#is inspired by an online tutorial:
+#https://github.com/ni79ls/har-keras-cnn/blob/master/20180903_Keras_HAR_WISDM_CNN_v1.0_for_medium.py
+  
 
-    column_names = ['user-id',
-                    'activity',
-                    'timestamp',
-                    'x-axis',
-                    'y-axis',
-                    'z-axis']
-    df = pd.read_csv(file_path,
-                     header=None,
-                     names=column_names)
-    # Last column has a ";" character which must be removed ...
-    df['z-axis'].replace(regex=True,
-      inplace=True,
-      to_replace=r';',
-      value=r'')
-    # ... and then this column must be transformed to float explicitly
-    df['z-axis'] = df['z-axis'].apply(convert_to_float)
-    # This is very important otherwise the model will not fit and loss
-    # will show up as NAN
-    df.dropna(axis=0, how='any', inplace=True)
-
-    return df
-
+#function to return number as float
 def convert_to_float(x):
 
     try:
         return np.float(x)
     except:
         return np.nan
- 
+  
+#function to return data from the file in the correct format  
+def read_data(file_path):
+
+    column_names = ['user-id','activity','timestamp','x-axis','y-axis','z-axis']
+    df = pd.read_csv(file_path, header=None, names=column_names)
+    
+    # Last column has a ";" character which must be removed
+    df['z-axis'].replace(regex=True, inplace=True, to_replace=r';',value=r'')
+   
+    # ... and then this column must be transformed to float explicitly
+    df['z-axis'] = df['z-axis'].apply(convert_to_float)
+    
+    # This is very important otherwise the model will not fit and loss will show up as NAN
+    df.dropna(axis=0, how='any', inplace=True)
+
+    return df
+
+#function to get basic info from the dataframe passed to it
 def show_basic_dataframe_info(dataframe):
 
     # Shape and how many rows and columns
@@ -419,18 +415,15 @@ wisdm_dataset = read_data('WISDM_ar_v1.1_raw.txt')
 
 
 #preprocessing WISDM dataset
-#normalising accelerometer values to be between 0 and 1
 wisdm_dataset['x-axis'] = wisdm_dataset['x-axis']/10
 wisdm_dataset['y-axis'] = wisdm_dataset['y-axis']/10
 wisdm_dataset['z-axis'] = wisdm_dataset['z-axis']/10
 
 
-
+#Deleting the jogging activities
 indexNames = wisdm_dataset[ wisdm_dataset['activity'] == "Jogging" ].index
  
-# Delete these row indexes from dataFrame
 wisdm_dataset.drop(indexNames , inplace=True)
-
 
 
 #to confirm no empty dataframes are present
@@ -457,12 +450,11 @@ for i in range(0, len(wisdm_dataset)):
 wisdm_dataset = pd.DataFrame(wisdm_dataset)
 wisdm_dataset.columns = ['user-id', 'activity', 'timestamp', 'x-axis', 'y-axis', 'z-axis']
 
-
+#Encoding the activities
 from sklearn.preprocessing import LabelEncoder
 WISDM_Label = LabelEncoder()
 wisdm_dataset['Test_Label'] = WISDM_Label.fit_transform(wisdm_dataset['activity'])
 WISDM_Label_Encoder_mapping = dict(zip(WISDM_Label.classes_, WISDM_Label.transform(WISDM_Label.classes_)))
-
 
 
 #Scaling the data
@@ -474,8 +466,6 @@ scaler = StandardScaler()
 wisdm_test_X = scaler.fit_transform(wisdm_test_X)
 wisdm_test_scaled_X = pd.DataFrame(data=wisdm_test_X, columns = ['x-axis', 'y-axis', 'z-axis'])
 wisdm_test_scaled_X['Test_Label'] = wisdm_test_y.values
-
-
 
 
 #segmenting the data
@@ -510,10 +500,8 @@ wisdm_y_pred = model.predict_classes(wisdm_X_test)
 
 print("Accuracy on validation set: ", accuracy_score(wisdm_y_test, wisdm_y_pred) * 100)
 
-
 wisdm_mat = confusion_matrix(wisdm_y_test, wisdm_y_pred)
 plot_confusion_matrix(conf_mat=wisdm_mat, class_names=Label.classes_, show_normed=True, figsize=(30,30), show_absolute=True, colorbar=True)
-
 
 
 import innvestigate
@@ -527,6 +515,32 @@ result1 = np.zeros((data_size, X_test.shape[2])).reshape(1,data_size,X_test.shap
 result2 = np.zeros((data_size, X_test.shape[2])).reshape(1,data_size,X_test.shape[2])
 rezimage = np.zeros((data_size, X_test.shape[2])).reshape(1,data_size,X_test.shape[2])
 
+#The following for loop is for standing activity
+for n in range(50,61):
+    image = X_test[n:n+1]
+    correct_class = y_test[n]
+    prediction_class = y_pred[n]
+    #Creating LRP analyser
+    LRP_epsilon = innvestigate.analyzer.relevance_based.relevance_analyzer.LRPEpsilon(model, epsilon=1e-07, bias=True, neuron_selection_mode="index")
+    #Applying the analyzer
+    
+    analysis1 = LRP_epsilon.analyze(image, 0)
+    analysis2 = LRP_epsilon.analyze(image, 1)
+    
+    result1 = np.vstack((result1,analysis1))
+    result2 = np.vstack((result2,analysis2))  
+      
+    imageraw = X_test[n:n+1]
+    rezimage = np.vstack((rezimage,imageraw)) 
+
+
+"""
+#The following for loop is for walking
+data_size = 200
+
+result1 = np.zeros((data_size, X_test.shape[2])).reshape(1,data_size,X_test.shape[2])
+result2 = np.zeros((data_size, X_test.shape[2])).reshape(1,data_size,X_test.shape[2])
+rezimage = np.zeros((data_size, X_test.shape[2])).reshape(1,data_size,X_test.shape[2])
 
 for n in range(1,11):
     image = X_test[n:n+1]
@@ -545,9 +559,7 @@ for n in range(1,11):
     imageraw = X_test[n:n+1]
     rezimage = np.vstack((rezimage,imageraw)) 
     
-
-print("1")
-
+"""
     
 
 fig = plot.figure()
@@ -574,70 +586,10 @@ for x in list(range(0,3)):
     color = 'tab:blue'
     ax2.set_ylabel('LRP Relevance', color = 'black')
     
-    ax2.plot(analysis1[:,:,x].squeeze(), label='LRP relevance', color = color)
+#    ax2.plot(analysis1[:,:,x].squeeze(), label='LRP relevance', color = color)
+#    ax2.legend(loc='upper right', frameon=False)
+    
+    ax2.plot(analysis2[:,:,x].squeeze(), label='LRP relevance', color=color)
     ax2.legend(loc='upper right', frameon=False)
     
-    #ax2.plot(analysis2[:,:,x].squeeze(), label='LRP relevance', color=color)
-    #ax2.legend(loc='upper right', frameon=False)
-    
     ax2.tick_params(axis='y', labelcolor='black')
-
-
-"""
-plot.figure(1)
-plot.plot(image.squeeze())
-plot.ylabel('Vertical amplitude')
-#plot.title('True label = %f, %f' %correct_class, predicted_class)
-plot.title('True_label='+str(int(correct_class))+', predicted_label='+str(prediction_class))
-
-plot.figure(2)
-plot.plot(analysis1.squeeze())
-plot.ylabel('LRP_epsilon relevance')
-
-plot.figure(3)
-plot.plot(analysis2.squeeze())
-plot.ylabel('LRP_epsilon relevance')
-
-#
-## Creating an analyzer
-#gradient_analyzer = innvestigate.create_analyzer("gradient", model)
-#
-#import tensorflow as tf
-#tf.compat.v1.disable_eager_execution()
-#tf.keras.backend.clear_session()
-#graph = tf.compat.v1.get_default_graph()
-#import keras.backend as K
-#K.clear_session()
-#global graph
-#
-#
-#
-#analysis = gradient_analyzer.analyze(X_test)
-#
-#
-#
-#
-#analyzer = innvestigate.create_analyzer("lrp.z", model)
-#
-#analysis = analyzer.analyze(X_test)
-#
-
-
-#import tensorflow as tf
-#tf.compat.v1.disable_eager_execution()
-#tf.keras.backend.clear_session()
-#
-#graph = tf.compat.v1.get_default_graph()
-#global graph
-#tf.compat.v1.disable_v2_behavior()
-
-#import tensorflow as tf
-#tf.compat.v1.disable_eager_execution()
-#tf.keras.backend.clear_session()
-
-
-#graph = tf.compat.v1.get_default_graph()
-#global graph
-
-
-"""
