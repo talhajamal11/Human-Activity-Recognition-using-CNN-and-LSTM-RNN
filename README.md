@@ -44,3 +44,6 @@ The following files were generated as a result of that data preprocessing on the
 
 ### Results
 
+#### LSTM RNN results
+![LSTM RNN Confusion Matrix on Testing Data](images//images/LSTM%20RNN%20CM%20on%20testing%20set.png)
+
