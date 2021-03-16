@@ -45,5 +45,23 @@ The following files were generated as a result of that data preprocessing on the
 ### Results
 
 #### LSTM RNN results
-<img src="images/LSTM%20RNN%20CM%20on%20testing%20set.png" width="500" >
+LSTM RNN on testing set             |  LSTM RNN on validation set
+:-------------------------:|:-------------------------:
+<img src="images/LSTM%20RNN%20CM%20on%20testing%20set.png" width="450" >  |   <img src="images/LSTM%20RNN%20CM%20on%20validation%20set.png" width="450" >
 
+LSTM RNN Accuracy vs Epochs             |  LSTM RNN Model Loss with Epochs
+:-------------------------:|:-------------------------:
+<img src="images/LSTM%20RNN%20Accuracy%20vs%20Epochs.png" width="450" >   |   <img src="images/LSTM%20RNN%20model%20loss.png" width="450" >
+
+
+
+
+
+#### CNN results
+CNN on testing set             |  CNN on validation set
+:-------------------------:|:-------------------------:
+<img src="images/CNN%20CM%20on%20testing%20set.png" width="450">  |   <img src="images/CNN%20CM%20on%20validation%20set.png" width="450">
+
+CNN Accuracy vs Epochs             |  CNN Model Loss with Epochs
+:-------------------------:|:-------------------------:
+<img src="images/CNN%20model%20accuracy%20vs%20epochs.png" width="450">  |   <img src="images/CNN%20model%20loss%20vs%20epochs.png" width="450">
