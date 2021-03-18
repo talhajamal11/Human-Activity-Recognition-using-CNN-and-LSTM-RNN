@@ -65,3 +65,8 @@ CNN on testing set             |  CNN on validation set
 CNN Accuracy vs Epochs             |  CNN Model Loss with Epochs
 :-------------------------:|:-------------------------:
 <img src="images/CNN%20model%20accuracy%20vs%20epochs.png" width="450">  |   <img src="images/CNN%20model%20loss%20vs%20epochs.png" width="450">
+
+
+### The Final Year Individual Project Report and the feedback from my supervisor can be read from the following two files:
+  1. Final Year Individual Project Report (73% marks recieved)
+  2. Project Feedback from Professor
