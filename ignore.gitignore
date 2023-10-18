@@ -1,6 +1,0 @@
-#Dont track contents of these files
-acceleration_labelled_data.csv
-
-#Dont track contents of these folders
-LSTM-RNN-for-Human-Activity-Recognition/
-Not so important files/
